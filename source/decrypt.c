@@ -327,7 +327,7 @@ int decrypt_pup_data(const decrypt_state * state)
   }
 
 
-  if (file_header.magic != 0x1D3D154F) {
+  if (file_header.magic != 0xEEF51454) {
     printfsocket("PUP header magic is invalid!\n");
     goto end;
   }

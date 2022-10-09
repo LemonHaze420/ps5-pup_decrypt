@@ -23,7 +23,7 @@ int encsrv_verify_blsheader(int fd, void* buffer, uint64_t length, uint64_t unkn
   args.buffer = buffer,
   args.length = length;
   args.unknown = unknown;
-  return ioctl(fd, 0xC010440D, &args);
+  return ioctl(fd, 0xC0104401, &args);                  // done
 }
 
 
@@ -34,7 +34,7 @@ int encsrv_decrypt_header(int fd, void* buffer, size_t length, int type)
   args.buffer = buffer,
   args.length = length;
   args.type = translate_type(type);
-  return ioctl(fd, 0xC0184401, &args);
+  return ioctl(fd, 0xC0184402, &args);                  // done 
 }
 
 int encsrv_verify_segment(int fd, uint16_t index, void* buffer, size_t length, int additional)
@@ -45,7 +45,7 @@ int encsrv_verify_segment(int fd, uint16_t index, void* buffer, size_t length, i
   args.buffer = buffer,
   args.length = length;
   //VerifyPupAdditionalSign / VerifyPupWatermark
-  int op = additional != 0 ? 0xC0184402 : 0xC0184403;
+  int op = additional != 0 ? 0xC0184403 : 0xC0184404;   // done
   return ioctl(fd, op, &args);
 }
 
@@ -56,7 +56,7 @@ int encsrv_decrypt_segment(int fd, uint16_t index, void* buffer, size_t length)
   args.index = index;
   args.buffer = buffer,
   args.length = length;
-  return ioctl(fd, 0xC0184404, &args);
+  return ioctl(fd, 0xC0184405, &args);                  // done
 }
 
 int encsrv_decrypt_segment_block(int fd, uint16_t entry_index, uint16_t block_index, void* block_buffer,
@@ -70,5 +70,5 @@ int encsrv_decrypt_segment_block(int fd, uint16_t entry_index, uint16_t block_in
   args.block_length = block_length;
   args.table_buffer = table_buffer;
   args.table_length = table_length;
-  return ioctl(fd, 0xC0284405, &args);
+  return ioctl(fd, 0xC0284406, &args);                  // done
 }
