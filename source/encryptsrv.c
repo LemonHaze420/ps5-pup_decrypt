@@ -1,4 +1,5 @@
-#include "ps4.h"
+#include "resolve.h"
+
 #include "encryptsrv_args.h"
 
 
@@ -17,58 +18,58 @@ int translate_type(int type)
 }
 
 
-int encsrv_verify_blsheader(int fd, void* buffer, uint64_t length, uint64_t unknown) {
+int encsrv_verify_blsheader(int fd, void* buffer, unsigned long length, unsigned long unknown) {
   verify_blsheader_args args;
-  memset(&args, 0, sizeof(args));
+  f_memset(&args, 0, sizeof(args));
   args.buffer = buffer,
   args.length = length;
   args.unknown = unknown;
-  return ioctl(fd, 0xC0104401, &args);                  // done
+  return f_ioctl(fd, 0xC0104401, &args);                  // done
 }
 
 
 int encsrv_decrypt_header(int fd, void* buffer, size_t length, int type)
 {
   decrypt_header_args args;
-  memset(&args, 0, sizeof(args));
+  f_memset(&args, 0, sizeof(args));
   args.buffer = buffer,
   args.length = length;
   args.type = translate_type(type);
-  return ioctl(fd, 0xC0184402, &args);                  // done 
+  return f_ioctl(fd, 0xC0184402, &args);                  // done 
 }
 
-int encsrv_verify_segment(int fd, uint16_t index, void* buffer, size_t length, int additional)
+int encsrv_verify_segment(int fd, unsigned short index, void* buffer, size_t length, int additional)
 {
   verify_segment_args args;
-  memset(&args, 0, sizeof(args));
+  f_memset(&args, 0, sizeof(args));
   args.index = index;
   args.buffer = buffer,
   args.length = length;
   //VerifyPupAdditionalSign / VerifyPupWatermark
   int op = additional != 0 ? 0xC0184403 : 0xC0184404;   // done
-  return ioctl(fd, op, &args);
+  return f_ioctl(fd, op, &args);
 }
 
-int encsrv_decrypt_segment(int fd, uint16_t index, void* buffer, size_t length)
+int encsrv_decrypt_segment(int fd, unsigned short index, void* buffer, size_t length)
 {
   decrypt_segment_args args;
-  memset(&args, 0, sizeof(args));
+  f_memset(&args, 0, sizeof(args));
   args.index = index;
   args.buffer = buffer,
   args.length = length;
-  return ioctl(fd, 0xC0184405, &args);                  // done
+  return f_ioctl(fd, 0xC0184405, &args);                  // done
 }
 
-int encsrv_decrypt_segment_block(int fd, uint16_t entry_index, uint16_t block_index, void* block_buffer,
+int encsrv_decrypt_segment_block(int fd, unsigned short entry_index, unsigned short block_index, void* block_buffer,
                                 size_t block_length, void* table_buffer, size_t table_length)
 {
   decrypt_segment_block_args args;
-  memset(&args, 0, sizeof(args));
+  f_memset(&args, 0, sizeof(args));
   args.entry_index = entry_index;
   args.block_index = block_index;
   args.block_buffer = block_buffer,
   args.block_length = block_length;
   args.table_buffer = table_buffer;
   args.table_length = table_length;
-  return ioctl(fd, 0xC0284406, &args);                  // done
+  return f_ioctl(fd, 0xC0284406, &args);                  // done
 }

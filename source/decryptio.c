@@ -1,3 +1,4 @@
+#include "resolve.h"
 #include "decryptio.h"
 #include "defines.h"
 #include "debug.h"
@@ -17,19 +18,19 @@ ssize_t readbytes(const decrypt_state * state, size_t offset, size_t bytes, void
 
       switch (offset) {
       case DIO_RESET:
-          result = lseek(state->input_file, 0, SEEK_SET);
+          result = f_lseek(state->input_file, 0, SEEK_SET);
           break;
       case DIO_BASEOFFSET:
-          result = lseek(state->input_file, state->input_base_offset, SEEK_SET);
+          result = f_lseek(state->input_file, state->input_base_offset, SEEK_SET);
           break;
       default:
-          result = lseek(state->input_file, state->input_base_offset + offset, SEEK_SET);
+          result = f_lseek(state->input_file, state->input_base_offset + offset, SEEK_SET);
           break;
       }
 
       if (result == -1) {
-          int errcode = errno;
-          printfsocket("ReadBytes seek_set failed! - Error: %d (%s)\n", errcode, strerror(errcode));
+          
+          printfsocket("ReadBytes seek_set failed! - Error: %d\n", result);
           return -1;
       }
 
@@ -42,7 +43,7 @@ ssize_t readbytes(const decrypt_state * state, size_t offset, size_t bytes, void
   size_t bytesremaining = bytes;
 
   while (bytesremaining > 0) {
-    result = read(state->input_file, buffer+bytesread, (bytesremaining >= rchunksize) ? rchunksize : bytesremaining);
+    result = f_read(state->input_file, buffer+bytesread, (bytesremaining >= rchunksize) ? rchunksize : bytesremaining);
 
     if (result < 1) {
        break;
@@ -53,10 +54,9 @@ ssize_t readbytes(const decrypt_state * state, size_t offset, size_t bytes, void
   }
 
   if ((result == -1) || (bytesread != bytes)) {
-      int errcode = errno;
+      
       printfsocket("Read failed; Read " SSIZET_FMT " of " SSIZET_FMT "bytes - Result: %d (%s)\n", bytesread, bytes,
-												  errcode,
-												  strerror(errcode));
+												  result);
       return -1;
   }
 
@@ -80,19 +80,18 @@ ssize_t writebytes(const decrypt_state * state, size_t offset, size_t bytes, voi
 
       switch (offset) {
       case DIO_RESET:
-          result = lseek(state->output_file, 0, SEEK_SET);
+          result = f_lseek(state->output_file, 0, SEEK_SET);
           break;
       case DIO_BASEOFFSET:
-          result = lseek(state->output_file, state->output_base_offset, SEEK_SET);
+          result = f_lseek(state->output_file, state->output_base_offset, SEEK_SET);
           break;
       default:
-          result = lseek(state->output_file, state->output_base_offset + offset, SEEK_SET);
+          result = f_lseek(state->output_file, state->output_base_offset + offset, SEEK_SET);
           break;
       }
 
       if (result == -1) {
-          int errcode = errno;
-          printfsocket("WriteBytes seek_set failed! - Error: %d (%s)\n", errcode, strerror(errcode));
+          printfsocket("WriteBytes seek_set failed! - Error: %d\n", result);
           return -1;
       }
 
@@ -105,7 +104,7 @@ ssize_t writebytes(const decrypt_state * state, size_t offset, size_t bytes, voi
   size_t bytesremaining = bytes;
 
   while (bytesremaining > 0) {
-    result = write(state->output_file, buffer+byteswritten, (bytesremaining >= wchunksize) ? wchunksize : bytesremaining);
+    result = f_write(state->output_file, buffer+byteswritten, (bytesremaining >= wchunksize) ? wchunksize : bytesremaining);
 
     if (result < 1) {
        break;
@@ -116,10 +115,9 @@ ssize_t writebytes(const decrypt_state * state, size_t offset, size_t bytes, voi
   }
 
   if ((result == -1) || (byteswritten != bytes)) {
-      int errcode = errno;
-      printfsocket("Write failed; Write " SSIZET_FMT " of " SSIZET_FMT "bytes - Result: %d (%s)\n", byteswritten,
-												    bytes, errcode,
-												    strerror(errcode));
+      
+      printfsocket("Write failed; Write " SSIZET_FMT " of " SSIZET_FMT "bytes - Result: %d\n", byteswritten,
+												    bytes, result);
       return -1;
   }
 

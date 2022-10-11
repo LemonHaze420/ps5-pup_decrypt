@@ -1,7 +1,7 @@
 #ifndef __DECRYPTIO_H__
 #define __DECRYPTIO_H__
 
-#include "ps4.h"
+
 
 typedef struct _decrypt_state
 {

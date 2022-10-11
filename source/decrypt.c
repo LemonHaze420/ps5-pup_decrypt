@@ -1,4 +1,4 @@
-#include "ps4.h"
+#include "resolve.h"
 #include "pup.h"
 #include "bls.h"
 #include "decryptio.h"
@@ -11,7 +11,7 @@ int verify_segment(const decrypt_state* state, int index, pup_segment* segment, 
   int result;
   uint8_t* buffer = NULL;
 
-  buffer = memalign(0x4000, segment->compressed_size);
+  buffer = f_memalign(0x4000, segment->compressed_size);
   ssize_t bytesread = readbytes(state, segment->offset, segment->compressed_size, buffer, segment->compressed_size);
   if (bytesread != segment->compressed_size)
   {
@@ -23,14 +23,14 @@ int verify_segment(const decrypt_state* state, int index, pup_segment* segment, 
   result = encsrv_verify_segment(state->device_fd, index, buffer, segment->compressed_size, additional);
   if (result != 0)
   {
-    printfsocket("Failed to verify segment #%d! %d\n", index, errno);
+    printfsocket("Failed to verify segment #%d! %d\n", index, result);
     goto end;
   }
 
 end:
   if (buffer != NULL)
   {
-    free(buffer);
+    f_free(buffer);
   }
 
   return result;
@@ -76,7 +76,7 @@ int decrypt_segment(const decrypt_state* state, uint16_t index, pup_segment* seg
 {
   int result = -1;
 
-  uint8_t* buffer = buffer = memalign(0x4000, segment->compressed_size);
+  uint8_t* buffer = buffer = f_memalign(0x4000, segment->compressed_size);
 
   int is_compressed = (segment->flags & 8) != 0 ? 1 : 0;
 
@@ -107,8 +107,8 @@ int decrypt_segment(const decrypt_state* state, uint16_t index, pup_segment* seg
     result = encsrv_decrypt_segment(state->device_fd, index, buffer, encrypted_size);
     if (result != 0)
     {
-      int errcode = errno;
-      printfsocket("Failed to decrypt segment #%d! - Error: %d (%s)\n", index, errcode, strerror(errcode));
+      
+      printfsocket("Failed to decrypt segment #%d! - Error: %d\n", index, result);
       goto end;
     }
 
@@ -129,7 +129,7 @@ int decrypt_segment(const decrypt_state* state, uint16_t index, pup_segment* seg
 end:
   if (buffer != NULL)
   {
-    free(buffer);
+    f_free(buffer);
   }
 
   return result;
@@ -143,7 +143,7 @@ int decrypt_segment_blocks(const decrypt_state * state, uint16_t index, pup_segm
   uint8_t* block_buffer = NULL;
 
   size_t table_length = table_segment->compressed_size;
-  table_buffer = memalign(0x4000, table_length);
+  table_buffer = f_memalign(0x4000, table_length);
 
   ssize_t bytesread = readbytes(state, table_segment->offset, table_length, table_buffer, table_length);
   if (bytesread != table_length)
@@ -158,8 +158,8 @@ int decrypt_segment_blocks(const decrypt_state * state, uint16_t index, pup_segm
                                  table_index, table_buffer, table_length);
   if (result != 0)
   {
-    int errcode = errno;
-    printfsocket("  Failed to decrypt table for segment #%d! Error: %d (%s)\n", index, errcode, strerror(errcode));
+    
+    printfsocket("  Failed to decrypt table for segment #%d! Error: %d\n", index, result);
     goto end;
   }
 
@@ -186,12 +186,12 @@ int decrypt_segment_blocks(const decrypt_state * state, uint16_t index, pup_segm
     block_info = (pup_block_info*)&table_buffer[32 * block_count];
   }
 
-  block_buffer = memalign(0x4000, block_size);
+  block_buffer = f_memalign(0x4000, block_size);
 
   printfsocket("  Decrypting %d blocks...\n   ", block_count);
 
   int Seeked = 0;
-  GetElapsed(0);
+  //GetElapsed(0);
 
   size_t remaining_size = segment->compressed_size;
   int last_index = block_count - 1;
@@ -199,10 +199,10 @@ int decrypt_segment_blocks(const decrypt_state * state, uint16_t index, pup_segm
   {
     printfsocket("  Decrypting block %d/%d...\n", i, block_count);
 
-    if ((block_count > 50) && (i % 5 == 0) && (GetElapsed(15) == 1)) {
+    if ((block_count > 50) && (i % 5 == 0) ) {
        uint32_t percentage = (uint32_t)(((float)i / (float)block_count) * 100.0f);
-       sprintf(state->notifystr, "Approximately %d%% complete processing entry %s (%d/%d) from %s", percentage, state->entryname, state->entryid, state->totalentries, state->input_path);
-       notify(state->notifystr);
+       f_sprintf(state->notifystr, "Approximately %d%% complete processing entry %s (%d/%d) from %s", percentage, state->entryname, state->entryid, state->totalentries, state->input_path);
+       printfsocket(state->notifystr);
     }
 
     size_t read_size;
@@ -257,7 +257,7 @@ int decrypt_segment_blocks(const decrypt_state * state, uint16_t index, pup_segm
     if (result < 0)
     {
       int errcode = errno;
-      printfsocket("  Failed to decrypt block for segment #%d! Error: %d (%s)\n", index, errcode, strerror(errcode));
+      printfsocket("  Failed to decrypt block for segment #%d! Error: %d (%s)\n", index, errcode, f_strerror(errcode));
       goto end;
     }
 
@@ -275,12 +275,12 @@ int decrypt_segment_blocks(const decrypt_state * state, uint16_t index, pup_segm
 end:
   if (block_buffer != NULL)
   {
-    free(block_buffer);
+    f_free(block_buffer);
   }
 
   if (table_buffer != NULL)
   {
-    free(table_buffer);
+    f_free(table_buffer);
   }
 
   return result;
@@ -334,8 +334,8 @@ int decrypt_pup_data(const decrypt_state * state)
 
   int header_size = file_header.unknown_0C + file_header.unknown_0E;
 
-  header_data = memalign(0x4000, header_size);
-  memcpy(header_data, &file_header, sizeof(file_header));
+  header_data = f_memalign(0x4000, header_size);
+  f_memcpy(header_data, &file_header, sizeof(file_header));
 
   size_t tsize = header_size - sizeof(file_header);
   bytesread = readbytes(state, DIO_NOSEEK, tsize, &header_data[sizeof(file_header)], header_size);
@@ -352,8 +352,8 @@ int decrypt_pup_data(const decrypt_state * state)
 				   header_size, state->pup_type);
     if (result != 0)
     {
-      int errcode = errno;
-      printfsocket("Failed to decrypt header! Error: %d (%s)\n", errcode, strerror(errcode));
+      
+      printfsocket("Failed to decrypt header! Error: %d\n", result);
       goto end;
     }
   }
@@ -440,7 +440,7 @@ int decrypt_pup_data(const decrypt_state * state)
 end:
   if (header_data != NULL)
   {
-    free(header_data);
+    f_free(header_data);
   }
 
   return 0;
@@ -450,29 +450,29 @@ void decrypt_pup(decrypt_state * state, const char * OutputPath)
 {
 
   if (OutputPath != NULL) {
-      sprintf(state->output_path, OutputPath, state->entryname);
+      f_sprintf(state->output_path, OutputPath, state->entryname);
   }
   else
   {
-      sprintf(state->output_path, OUTPUTPATH, state->entryname);
+      f_sprintf(state->output_path, OUTPUTPATH, state->entryname);
   }
 
   printfsocket("Creating %s...\n", state->output_path);
 
-  state->output_file = open(state->output_path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+  state->output_file = f_open(state->output_path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
   if (state->output_file == -1)
   {
-    printfsocket("Failed to open %s!\n", state->output_path);
+    printfsocket("Failed to f_open %s!\n", state->output_path);
     goto end;
   }
 
 
   const char * name = state->entryname;
 
-  if (strcmp(name, "PS4UPDATE1.PUP") == 0 || strcmp(name, "PS4UPDATE2.PUP") == 0)
+  if (f_strcmp(name, "PS5UPDATE1.PUP") == 0)
     state->pup_type = 1;
 
-  if (strcmp(name, "PS4UPDATE3.PUP") == 0 || strcmp(name, "PS4UPDATE4.PUP") == 0)
+  if (f_strcmp(name, "PS5UPDATE2.PUP") == 0)
     state->pup_type = 0;
 
   if (state->pup_type < 0)
@@ -486,7 +486,7 @@ void decrypt_pup(decrypt_state * state, const char * OutputPath)
 end:
   if (state->output_file != -1)
   {
-    close(state->output_file);
+    f_close(state->output_file);
   }
 
 }
@@ -498,7 +498,7 @@ void decrypt_pups(const char * InputPath, const char * OutputPath)
   decrypt_state state = { 0 };
   state.device_fd = -1;
 
-  char * strings = (char*)malloc(2048);
+  char * strings = (char*)f_malloc(2048);
   state.input_path = strings; //512
   state.output_path = strings+512; //512
   state.entryname = strings+1024; //512
@@ -507,17 +507,17 @@ void decrypt_pups(const char * InputPath, const char * OutputPath)
   uint8_t * header_data = NULL;
   size_t blsinitial = 0x400;
 
-  sprintf(state.input_path, "%s", (InputPath != NULL) ? InputPath : INPUTPATH);
+  f_sprintf(state.input_path, "%s", (InputPath != NULL) ? InputPath : INPUTPATH);
 
   printfsocket("Opening %s...\n", state.input_path);
-  state.input_file = open(state.input_path, O_RDONLY, 0);
+  state.input_file = f_open(state.input_path, O_RDONLY, 0);
   if (state.input_file == -1)
   {
-    printfsocket("Failed to open %s!\n", state.input_path);
+    printfsocket("Failed to f_open %s!\n", state.input_path);
     goto end;
   }
 
-  header_data = memalign(0x4000, blsinitial);
+  header_data = f_memalign(0x4000, blsinitial);
 
   if (header_data == NULL) {
     printfsocket("Failed to allocate memory!\n");
@@ -546,10 +546,10 @@ void decrypt_pups(const char * InputPath, const char * OutputPath)
 
   for (uint32_t i = 0; i < header->file_count; i++)
   {
-    state.device_fd = open("/dev/pup_update0", O_RDWR, 0);
+    state.device_fd = f_open("/dev/pup_update0", O_RDWR, 0);
     if (state.device_fd < 0)
     {
-      printfsocket("Failed to open /dev/pup_update0!\n");
+      printfsocket("Failed to f_open /dev/pup_update0!\n");
       goto end;
     }
 
@@ -557,12 +557,12 @@ void decrypt_pups(const char * InputPath, const char * OutputPath)
     int result = encsrv_verify_blsheader(state.device_fd, header_data, blsinitial, 0);
 
     if (result != 0) {
-        int errcode = errno;
-        printfsocket("Failed while verifying Bls Header! Error: %d (%s)\n", errcode, strerror(errcode));
+        
+        printfsocket("Failed while verifying Bls Header! Error: %d\n", result);
         goto end;
     }
 
-    sprintf(state.entryname, "%s", header->entry_list[i].name);
+    f_sprintf(state.entryname, "%s", header->entry_list[i].name);
 
     state.pup_type = -1;
     state.entryid = i + 1;
@@ -572,12 +572,12 @@ void decrypt_pups(const char * InputPath, const char * OutputPath)
     state.output_file = -1;
     state.output_base_offset = 0;
 
-    sprintf(state.notifystr, "Decrypting \"%s\" (%d/%d) from %s...", state.entryname, state.entryid, state.totalentries, state.input_path);
-    notify(state.notifystr);
+    f_sprintf(state.notifystr, "Decrypting \"%s\" (%d/%d) from %s...", state.entryname, state.entryid, state.totalentries, state.input_path);
+    printfsocket(state.notifystr);
 
     decrypt_pup(&state, OutputPath);
 
-    close(state.device_fd);
+    f_close(state.device_fd);
     state.device_fd = -1;
 
   }
@@ -585,21 +585,21 @@ void decrypt_pups(const char * InputPath, const char * OutputPath)
 end:
   if (header_data != NULL)
   {
-    free(header_data);
+    f_free(header_data);
   }
 
   if (strings != NULL) {
-    free(strings);
+    f_free(strings);
   }
 
   if (state.input_file != -1)
   {
-    close(state.input_file);
+    f_close(state.input_file);
   }
 
   if (state.device_fd != -1)
   {
-    close(state.device_fd);
+    f_close(state.device_fd);
   }
 
 }
